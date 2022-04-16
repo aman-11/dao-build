@@ -41,7 +41,7 @@ contract CryptoDevsDAO {
         3. yesVotes : no of yes votes
         4. noVotes : no of no votes
         5. identifying the peoposal getting exec or not after deadline 
-        6. mapping of the voters
+        6. oters - a mapping of (uselessNFT)tokenIDs => booleans 'indicating whether that NFT has already been used to cast a vote or not'
      */
     struct Proposal {
         uint256 nftTokenId;
@@ -49,11 +49,17 @@ contract CryptoDevsDAO {
         uint256 yesVotes;
         uint256 noVotes;
         bool executed;
-        mapping(address => bool) voters;
+        mapping(uint256 => bool) voters;
     }
     //mapping of the proposal ID to PRoposal
     mapping(uint256 => Proposal) public proposals;
     //[numProposals]|| [1] => ['tokenId', '5thjan',...];
+
+    // enum to store yesVotes, noVotes
+    enum Vote {
+        YES,
+        NO
+    }
 
     //having the track of the proposal getting created
     uint256 public numProposals;
@@ -72,6 +78,14 @@ contract CryptoDevsDAO {
         require(
             uselessNft.balanceOf(msg.sender) > 0,
             "Sorry, you cant be the part of decison making as you dont have any NFT"
+        );
+        _;
+    }
+
+    modifier activeProposalOnly(uint256 proposalIndex) {
+        require(
+            proposals[proposalIndex].deadline > block.timestamp,
+            "Proposal time ended"
         );
         _;
     }
@@ -96,5 +110,32 @@ contract CryptoDevsDAO {
 
         numProposals++;
         return numProposals - 1;
+    }
+
+    //fucntion to voteOnProposal
+    function voteOnProposal(uint256 proposalIndex, Vote vote)
+        public
+        nftHolderOnly
+        activeProposalOnly(proposalIndex)
+    {
+        uint256 voterNftBalance = uselessNft.balanceOf(msg.sender);
+        uint256 numVotes = 0;
+
+        // Calculate how many NFTs are owned by the voter -> that haven't already been used for voting on this proposal
+        for (uint256 i = 0; i < voterNftBalance; i++) {
+            uint256 tokenId = uselessNft.tokenOfOwnerByIndex(msg.sender, i);
+            if (proposals[proposalIndex].voters[tokenId] == false) {
+                numVotes += 1;
+                proposals[proposalIndex].voters[tokenId] = true;
+            }
+        }
+
+        require(numVotes > 0, "Already used all NFT's for the voting");
+
+        if (vote == Vote.YES) {
+            proposals[proposalIndex].yesVotes += numVotes;
+        } else {
+            proposals[proposalIndex].noVotes += numVotes;
+        }
     }
 }
