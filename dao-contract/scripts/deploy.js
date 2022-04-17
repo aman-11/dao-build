@@ -17,7 +17,12 @@ async function main() {
 
   const CryptoDevDAOContractDeployed = await CryptoDevDAOContract.deploy(
     NFTMarketContarctDeployed.address,
-    USELESS_NFT_CONTRACT_ADDRESS
+    USELESS_NFT_CONTRACT_ADDRESS,
+    {
+      // This assumes your account has at least 1 ETH in it's account
+      // Change this value as you want
+      value: ethers.utils.parseEther("0.2"),
+    }
   );
   await CryptoDevDAOContractDeployed.deployed();
 
