@@ -1,15 +1,2 @@
-# Basic Sample Hardhat Project
-
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts.
-
-Try running some of the following tasks:
-
-```shell
-npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
-node scripts/sample-script.js
-npx hardhat help
-```
+NFT Market deployed to: 0xEfd0DAf6F87Ee0145Cfe31C635f074eef5C35eA6
+DAO deployed to: 0x3E973B100616035D344C94C661341D3c894Bc6E8

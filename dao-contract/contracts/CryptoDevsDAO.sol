@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 // have the interface for the markletPlace and the NFT contract deployed
 
 //1. market place interface
-interface NFTMarkrtPlace {
+interface INFTMarkrtPlace {
     function purchase(uint256 _tokenId) external payable;
 
     function getPrice() external view returns (uint256);
@@ -13,7 +13,7 @@ interface NFTMarkrtPlace {
 }
 
 //2. NFT contract to know which address making a vote is having nft or not
-interface CryptoDevNFT {
+interface ICryptoDevNFT {
     //ERC20 internal function
 
     //know the nft holded by any address
@@ -43,6 +43,8 @@ contract CryptoDevsDAO {
         5. identifying the peoposal getting exec or not after deadline 
         6. oters - a mapping of (uselessNFT)tokenIDs => booleans 'indicating whether that NFT has already been used to cast a vote or not'
      */
+    address payable public manager;
+
     struct Proposal {
         uint256 nftTokenId;
         uint256 deadline;
@@ -65,13 +67,14 @@ contract CryptoDevsDAO {
     uint256 public numProposals;
 
     //instance of the other contract need to be interacted during DAO
-    NFTMarkrtPlace nftMarketPlace;
-    CryptoDevNFT uselessNft;
+    INFTMarkrtPlace nftMarketPlace;
+    ICryptoDevNFT uselessNft;
 
     //making payable in order to fill ETH in the DAO treasury
     constructor(address _nftMarketPlace, address _uselessNft) payable {
-        nftMarketPlace = NFTMarkrtPlace(_nftMarketPlace);
-        uselessNft = CryptoDevNFT(_uselessNft);
+        manager = payable(msg.sender);
+        nftMarketPlace = INFTMarkrtPlace(_nftMarketPlace);
+        uselessNft = ICryptoDevNFT(_uselessNft);
     }
 
     modifier nftHolderOnly() {
@@ -87,6 +90,25 @@ contract CryptoDevsDAO {
             proposals[proposalIndex].deadline > block.timestamp,
             "Proposal time ended"
         );
+        _;
+    }
+
+    //modifier to be called by the function to check if the proposal has been executed or not and it should be ended by time
+    modifier proposalEnded(uint256 proposalIndex) {
+        require(
+            proposals[proposalIndex].deadline <= block.timestamp,
+            "Proposal ahs been ended"
+        );
+        require(
+            !proposals[proposalIndex].executed,
+            "Proposal already been executed"
+        );
+        _;
+    }
+
+    //create the modifier for teh owner check
+    modifier ownerOnly() {
+        require(manager == msg.sender, "only manager can access this function");
         _;
     }
 
@@ -138,4 +160,37 @@ contract CryptoDevsDAO {
             proposals[proposalIndex].noVotes += numVotes;
         }
     }
+
+    // executeProposal allows any CryptoDevsNFT holder to execute a proposal after it's deadline has been exceeded
+    function executeProposal(uint256 proposalIndex)
+        public
+        nftHolderOnly
+        proposalEnded(proposalIndex)
+        returns (bool success)
+    {
+        if (
+            proposals[proposalIndex].yesVotes > proposals[proposalIndex].noVotes
+        ) {
+            uint256 nftPrice = nftMarketPlace.getPrice();
+            require(
+                address(this).balance >= nftPrice,
+                "Not enough treasury funds"
+            );
+            nftMarketPlace.purchase{value: nftPrice}(
+                proposals[proposalIndex].nftTokenId
+            );
+
+            return true;
+        }
+    }
+
+    //create teh method to withdraw ethe
+    function withdrawEther() public ownerOnly {
+        manager.transfer(address(this).balance);
+    }
+
+    //allow anyone to transfer ether to contarct DAO treasury withough calling the pay function
+    receive() external payable {}
+
+    fallback() external payable {}
 }
