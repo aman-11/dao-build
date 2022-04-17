@@ -77,6 +77,7 @@ contract CryptoDevsDAO {
         uselessNft = ICryptoDevNFT(_uselessNft);
     }
 
+    //allow voting rights to nftholders only, check nft count of each voter
     modifier nftHolderOnly() {
         require(
             uselessNft.balanceOf(msg.sender) > 0,
@@ -85,6 +86,7 @@ contract CryptoDevsDAO {
         _;
     }
 
+    //check if the proposal is active or not
     modifier activeProposalOnly(uint256 proposalIndex) {
         require(
             proposals[proposalIndex].deadline > block.timestamp,
