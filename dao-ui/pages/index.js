@@ -9,6 +9,10 @@ import { ethers, BigNumber } from "ethers";
 import NftContract from "../helpers/NftContract";
 import DaoContract from "../helpers/DaoContract";
 import { DAO_CONTRACT_ADDRESS } from "../constants/daoVariable";
+import GetProviderOrSigner from "../helpers/GetProviderOrSigner";
+import Header from "../components/Header";
+import Create from "../components/Create";
+import View from "../components/View";
 
 export default function Home() {
   const {
@@ -21,30 +25,16 @@ export default function Home() {
     enableWeb3,
     account,
   } = useMoralis();
+  const [createOrView, setCreateOrView] = useState("");
   const [treasuryBalance, setTreasuryBalance] = useState("0");
   const [userNFTBalance, setUserNFtBalance] = useState(0);
   const [numOfProposals, setNumOfProposals] = useState(0);
-
-  const getProviderAndSigner = async (needSigner = false) => {
-    const { ethereum } = window;
-
-    if (ethereum) {
-      const provider = new ethers.providers.Web3Provider(ethereum);
-
-      if (needSigner) {
-        const signer = provider.getSigner();
-        return signer;
-      }
-
-      return provider;
-    }
-  };
 
   //TODO 1. get the treasury balance
   const getTreasuryBalance = async () => {
     try {
       if (isAuthenticated) {
-        const provider = await getProviderAndSigner();
+        const provider = await GetProviderOrSigner();
 
         const _treasuryBalance = await provider.getBalance(
           DAO_CONTRACT_ADDRESS
@@ -63,7 +53,7 @@ export default function Home() {
   const getNFTBalance = async () => {
     try {
       if (isAuthenticated) {
-        const signer = await getProviderAndSigner(true);
+        const signer = await GetProviderOrSigner(true);
 
         const nftContract = NftContract(signer);
         const address = await signer.getAddress();
@@ -81,7 +71,7 @@ export default function Home() {
   const getTotalNumOFProposals = async () => {
     try {
       if (isAuthenticated) {
-        const provider = await getProviderAndSigner();
+        const provider = await GetProviderOrSigner();
 
         const daoContract = DaoContract(provider);
         const _numOfProposals = await daoContract.numProposals();
@@ -118,26 +108,7 @@ export default function Home() {
         <meta property="og:title" content="Whitelist" key="title" />
       </Head>
 
-      {isAuthenticated && (
-        <header className="flex border-b justify-end bg-gray-900">
-          <div className="flex text-xs flex-col mt-2 mb-2 space-y-2 text-white">
-            {account && (
-              <p className="mr-16 text-xs font-normal">
-                Hello, {account.slice(0, 4)}...
-                {account.slice(account.length - 4)}
-              </p>
-            )}
-            <div>
-              <button
-                onClick={logout}
-                className="text-sm font-bold underline underline-offset-2"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </header>
-      )}
+      {isAuthenticated && <Header account={account} />}
 
       <main className="min-h-[85vh] pl-24 pr-24 flex items-center justify-center">
         <div className="flex-1 space-y-3">
@@ -153,12 +124,14 @@ export default function Home() {
               {ethers.utils.formatEther(treasuryBalance)} ETH
             </span>
           </p>
-          <p className="descText">
-            Your CryptoDevs NFT Balance:
-            <span className="underline font-semibold">
-              {userNFTBalance} NFT's
-            </span>
-          </p>
+          {isAuthenticated && (
+            <p className="descText">
+              Your CryptoDevs NFT Balance:
+              <span className="underline font-semibold">
+                {userNFTBalance} NFT's
+              </span>
+            </p>
+          )}
           <p className="descText">
             Total Number of Proposals:
             <span className="underline font-semibold">
@@ -169,23 +142,27 @@ export default function Home() {
             <div>
               <button
                 type="button"
+                onClick={() => setCreateOrView("Create")}
                 className="text-white bg-gradient-to-br from-pink-500 to-orange-400 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-200 dark:focus:ring-pink-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2"
               >
                 Create Proposal
               </button>
               <button
                 type="button"
+                onClick={() => setCreateOrView("View")}
                 className="text-white bg-gradient-to-br from-pink-500 to-orange-400 hover:bg-gradient-to-bl focus:ring-4 focus:outline-none focus:ring-pink-200 dark:focus:ring-pink-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center mr-2 mb-2"
               >
                 View Proposals
               </button>
               <br />
-              <p
-                onClick={authenticate}
-                className="font-base mt-1 underline underline-offset-1 text-sm cursor-pointer hover:text-gray-700"
-              >
-                Connect with different account?
-              </p>
+              {createOrView === "Create" ? (
+                <Create
+                  getupdatedProposalCount={getTotalNumOFProposals}
+                  userNFTBalance={userNFTBalance}
+                />
+              ) : (
+                <View numOfProposals={numOfProposals} />
+              )}
             </div>
           ) : (
             <button
