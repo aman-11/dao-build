@@ -5,6 +5,10 @@ import coverImage from "../public/cover.svg";
 import Metamask from "../components/Metamask";
 import { useMoralis } from "react-moralis";
 import ErrorMessage from "../components/ErrorMessage";
+import { ethers, BigNumber } from "ethers";
+import NftContract from "../helpers/NftContract";
+import DaoContract from "../helpers/DaoContract";
+import { DAO_CONTRACT_ADDRESS } from "../constants/daoVariable";
 
 export default function Home() {
   const {
@@ -15,26 +19,90 @@ export default function Home() {
     logout,
     Moralis,
     enableWeb3,
+    account,
   } = useMoralis();
-  const [account, setAccount] = useState("");
+  const [treasuryBalance, setTreasuryBalance] = useState("0");
+  const [userNFTBalance, setUserNFtBalance] = useState(0);
+  const [numOfProposals, setNumOfProposals] = useState(0);
 
-  // console.log("user", user);
-  // console.log("account", account);
-  // user.atttributes has all the necessary details required for retrv of wallet info
-  // console.log("user attr", user?.attributes.ethAddress);
-  // console.log("isAuthenticated", isAuthenticated);
+  const getProviderAndSigner = async (needSigner = false) => {
+    const { ethereum } = window;
+
+    if (ethereum) {
+      const provider = new ethers.providers.Web3Provider(ethereum);
+
+      if (needSigner) {
+        const signer = provider.getSigner();
+        return signer;
+      }
+
+      return provider;
+    }
+  };
+
+  //TODO 1. get the treasury balance
+  const getTreasuryBalance = async () => {
+    try {
+      if (isAuthenticated) {
+        const provider = await getProviderAndSigner();
+
+        const _treasuryBalance = await provider.getBalance(
+          DAO_CONTRACT_ADDRESS
+        );
+
+        setTreasuryBalance(_treasuryBalance.toString());
+      } else {
+        console.warn("Authentication still in progress");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  //TODO 2. get the nft balance of the user logged in
+  const getNFTBalance = async () => {
+    try {
+      if (isAuthenticated) {
+        const signer = await getProviderAndSigner(true);
+
+        const nftContract = NftContract(signer);
+        const address = await signer.getAddress();
+        const _numOfNFT = await nftContract.balanceOf(address);
+        setUserNFtBalance(parseInt(_numOfNFT.toString()));
+      } else {
+        console.warn("Authentication is still in progress");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  //TODO 3. get the total no of prposals
+  const getTotalNumOFProposals = async () => {
+    try {
+      if (isAuthenticated) {
+        const provider = await getProviderAndSigner();
+
+        const daoContract = DaoContract(provider);
+        const _numOfProposals = await daoContract.numProposals();
+        setNumOfProposals(parseInt(_numOfProposals.toString()));
+      } else {
+        console.warn("Authentication is still in progress");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const onPageLoadAction = async () => {
-    // console.log("user", user);
-    if (isAuthenticated) setAccount(user?.attributes.ethAddress);
+    await getTreasuryBalance();
+    await getNFTBalance();
+    await getTotalNumOFProposals();
   };
 
   useEffect(() => {
     onPageLoadAction();
     enableWeb3();
-    // Moralis.onWeb3Enabled((result) => {
-    //   console.log(result);
-    // });
 
     Moralis.onAccountChanged(function (account) {
       logout();
@@ -53,9 +121,12 @@ export default function Home() {
       {isAuthenticated && (
         <header className="flex border-b justify-end bg-gray-900">
           <div className="flex text-xs flex-col mt-2 mb-2 space-y-2 text-white">
-            <p className=" mr-16 text-xs font-normal">
-              Hello, {account.slice(0, 4)}...{account.slice(account.length - 4)}
-            </p>
+            {account && (
+              <p className="mr-16 text-xs font-normal">
+                Hello, {account.slice(0, 4)}...
+                {account.slice(account.length - 4)}
+              </p>
+            )}
             <div>
               <button
                 onClick={logout}
@@ -77,16 +148,22 @@ export default function Home() {
             Welcome to the <b>DAO</b>!
           </p>
           <p className="descText">
-            Your CryptoDevs NFT Balance:
-            <span className="underline font-semibold">2 Tokens</span>
-          </p>
-          <p className="descText">
             Treasury Balance:
-            <span className="underline font-semibold">4 ETH</span>
+            <span className="underline font-semibold">
+              {ethers.utils.formatEther(treasuryBalance)} ETH
+            </span>
           </p>
           <p className="descText">
-            Total Number of Proposals:{" "}
-            <span className="underline font-semibold">1 ETH</span>
+            Your CryptoDevs NFT Balance:
+            <span className="underline font-semibold">
+              {userNFTBalance} NFT's
+            </span>
+          </p>
+          <p className="descText">
+            Total Number of Proposals:
+            <span className="underline font-semibold">
+              {numOfProposals} ETH
+            </span>
           </p>
           {isAuthenticated ? (
             <div>
