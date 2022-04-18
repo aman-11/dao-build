@@ -161,7 +161,7 @@ export default function Home() {
                   userNFTBalance={userNFTBalance}
                 />
               ) : (
-                <View numOfProposals={numOfProposals} />
+                <View />
               )}
             </div>
           ) : (

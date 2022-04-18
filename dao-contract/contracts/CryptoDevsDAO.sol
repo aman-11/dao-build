@@ -182,6 +182,7 @@ contract CryptoDevsDAO {
                 proposals[proposalIndex].nftTokenId
             );
 
+            proposals[proposalIndex].executed = true;
             return true;
         }
     }
